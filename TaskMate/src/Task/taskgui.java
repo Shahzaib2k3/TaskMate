@@ -1,93 +1,137 @@
 package Task;
 
-import java.awt.EventQueue;
-
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JTextField;
-import javax.swing.JButton;
-import javax.swing.JList;
-import javax.swing.JTable;
+import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.*;
 
 public class taskgui {
 
 	private JFrame frame;
-	private JTextField textField;
-	private JTextField textField_1;
+	private JTextField titleField;
+	private JTextField dueDateField;
 	private JTable table;
+	private DefaultTableModel tableModel;
+	private taskmanager manager = new taskmanager();
 
-	/**
-	 * Launch the application.
-	 */
 	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					taskgui window = new taskgui();
-					window.frame.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+		EventQueue.invokeLater(() -> {
+			try {
+				taskgui window = new taskgui();
+				window.frame.setVisible(true);
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		});
 	}
 
-	/**
-	 * Create the application.
-	 */
 	public taskgui() {
 		initialize();
 	}
 
-	/**
-	 * Initialize the contents of the frame.
-	 */
 	private void initialize() {
-		frame = new JFrame();
-		frame.setBounds(100, 100, 533, 509);
+		frame = new JFrame("🌟 Task Manager");
+		frame.setBounds(100, 100, 600, 500);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.getContentPane().setLayout(null);
-		
-		JLabel lblNewLabel = new JLabel("Task Title");
-		lblNewLabel.setBounds(10, 42, 66, 13);
-		frame.getContentPane().add(lblNewLabel);
-		
-		textField = new JTextField();
-		textField.setBounds(69, 39, 96, 19);
-		frame.getContentPane().add(textField);
-		textField.setColumns(10);
-		
-		JLabel lblNewLabel_1 = new JLabel("Due Date");
-		lblNewLabel_1.setBounds(10, 87, 70, 13);
-		frame.getContentPane().add(lblNewLabel_1);
-		
-		textField_1 = new JTextField();
-		textField_1.setBounds(69, 84, 96, 19);
-		frame.getContentPane().add(textField_1);
-		textField_1.setColumns(10);
-		
-		JButton btnNewButton = new JButton("Add Task");
-		btnNewButton.setBounds(355, 38, 136, 21);
-		frame.getContentPane().add(btnNewButton);
-		
-		JButton btnNewButton_1 = new JButton("Mark Completed");
-		btnNewButton_1.setBounds(355, 83, 136, 21);
-		frame.getContentPane().add(btnNewButton_1);
-		
-		JButton btnNewButton_2 = new JButton("Delete Task");
-		btnNewButton_2.setBounds(355, 127, 136, 21);
-		frame.getContentPane().add(btnNewButton_2);
-		
-		table = new JTable();
-		table.setModel(new DefaultTableModel(
-			new Object[][] {
-			},
-			new String[] {
-				"Title", "Date", "Completed"
+		frame.getContentPane().setLayout(new BorderLayout(10, 10));
+
+		// Top Panel: Input Form
+		JPanel inputPanel = new JPanel();
+		inputPanel.setBorder(new TitledBorder("Add New Task"));
+		inputPanel.setLayout(new GridLayout(3, 2, 10, 10));
+		inputPanel.setBackground(new Color(245, 245, 245));
+
+		JLabel titleLabel = new JLabel("Task Title:");
+		titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+		inputPanel.add(titleLabel);
+
+		titleField = new JTextField();
+		inputPanel.add(titleField);
+
+		JLabel dateLabel = new JLabel("Due Date:");
+		dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+		inputPanel.add(dateLabel);
+
+		dueDateField = new JTextField();
+		inputPanel.add(dueDateField);
+
+		JButton addBtn = new JButton("➕ Add Task");
+		JButton completeBtn = new JButton("✅ Mark Completed");
+		JButton deleteBtn = new JButton("🗑️ Delete Task");
+
+		JPanel buttonPanel = new JPanel(new FlowLayout());
+		buttonPanel.setBackground(new Color(245, 245, 245));
+		buttonPanel.add(addBtn);
+		buttonPanel.add(completeBtn);
+		buttonPanel.add(deleteBtn);
+
+		JPanel topWrapper = new JPanel(new BorderLayout());
+		topWrapper.add(inputPanel, BorderLayout.CENTER);
+		topWrapper.add(buttonPanel, BorderLayout.SOUTH);
+
+		frame.getContentPane().add(topWrapper, BorderLayout.NORTH);
+
+	
+		tableModel = new DefaultTableModel(new Object[][] {}, new String[] { "ID", "Title", "Due Date", "Completed" });
+		table = new JTable(tableModel);
+		table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+		table.setRowHeight(22);
+
+		JScrollPane scrollPane = new JScrollPane(table);
+		scrollPane.setBorder(new TitledBorder("📋 Task List"));
+		frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
+
+
+		addBtn.addActionListener(e -> {
+			String title = titleField.getText().trim();
+			String dueDate = dueDateField.getText().trim();
+			if (title.isEmpty() || dueDate.isEmpty()) {
+				JOptionPane.showMessageDialog(frame, "Please enter both title and due date.");
+				return;
 			}
-		));
-		table.setBounds(10, 227, 499, 235);
-		frame.getContentPane().add(table);
+			manager.addTask(title, dueDate);
+			refreshTable();
+			titleField.setText("");
+			dueDateField.setText("");
+		});
+
+		completeBtn.addActionListener(e -> {
+			int selectedRow = table.getSelectedRow();
+			if (selectedRow != -1) {
+				Task task = manager.getTaskByRow(selectedRow);
+				if (task != null) {
+					manager.markCompleted(task.getId());
+					refreshTable();
+				}
+			} else {
+				JOptionPane.showMessageDialog(frame, "Please select a task.");
+			}
+		});
+
+		deleteBtn.addActionListener(e -> {
+			int selectedRow = table.getSelectedRow();
+			if (selectedRow != -1) {
+				Task task = manager.getTaskByRow(selectedRow);
+				if (task != null) {
+					manager.deleteTask(task.getId());
+					refreshTable();
+				}
+			} else {
+				JOptionPane.showMessageDialog(frame, "Please select a task.");
+			}
+		});
+	}
+
+	private void refreshTable() {
+		tableModel.setRowCount(0);
+		for (Task task : manager.getTasks()) {
+			tableModel.addRow(new Object[] {
+				task.getId(),
+				task.getTitle(),
+				task.getDueDate(), 
+				task.isCompleted() ? "Yes" : "No"
+			});
+		}
 	}
 }
